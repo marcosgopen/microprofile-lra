@@ -54,8 +54,10 @@ public class ValidLRACSParticipant {
     public static final String ROOT_PATH = "valid-cs-participant1";
     public static final String ENLIST_WITH_COMPLETE = "enlist-complete";
     public static final String ENLIST_WITH_COMPENSATE = "enlist-compensate";
+    public static final String HAS_ENDED = "has-ended";
 
     private int recoveryPasses;
+    private volatile ParticipantStatus participantStatus = ParticipantStatus.Active;
 
     @Inject
     private LRAMetricService lraMetricService;
@@ -78,21 +80,39 @@ public class ValidLRACSParticipant {
     public CompletionStage<Void> compensate(URI lraId) {
         assert lraId != null;
 
+        synchronized (this) {
+            this.participantStatus = ParticipantStatus.Compensating;
+        }
         return CompletableFuture.runAsync(
-                () -> lraMetricService.incrementMetric(LRAMetricType.Compensated, lraId, ValidLRACSParticipant.class));
+                () -> {
+                    lraMetricService.incrementMetric(LRAMetricType.Compensated, lraId, ValidLRACSParticipant.class);
+                    synchronized (this) {
+                        this.participantStatus = ParticipantStatus.Compensated;
+                    }
+                });
     }
 
     @Complete
     public CompletionStage<Response> complete(URI lraId) {
         assert lraId != null;
 
+        synchronized (this) {
+            this.participantStatus = ParticipantStatus.Completing;
+        }
         return CompletableFuture.supplyAsync(() -> {
             lraMetricService.incrementMetric(LRAMetricType.Completed, lraId, ValidLRACSParticipant.class);
 
+            synchronized (this) {
+                this.participantStatus = ParticipantStatus.Completed;
+            }
             return Response.accepted().build(); // Completing
         });
     }
 
+    /*
+     * The @Status method, if present, MUST report the progress of the compensation.
+     * Similarly, if the resource cannot perform a completion activity immediately.
+     */
     @Status
     public CompletionStage<ParticipantStatus> status(URI lraId) {
         assert lraId != null;
@@ -100,8 +120,19 @@ public class ValidLRACSParticipant {
         return CompletableFuture.supplyAsync(() -> {
             lraMetricService.incrementMetric(LRAMetricType.Status, lraId, ValidLRACSParticipant.class);
 
-            return ParticipantStatus.Completed;
+            return this.participantStatus;
         });
+    }
+
+    @GET
+    @Path(HAS_ENDED)
+    @LRA(value = LRA.Type.REQUIRED)
+    public Response isFinished(@HeaderParam(LRA.LRA_HTTP_CONTEXT_HEADER) URI lraId) {
+        if (this.participantStatus == ParticipantStatus.Completed
+                || this.participantStatus == ParticipantStatus.Compensated) {
+            return Response.ok().entity(lraId).build();
+        }
+        return Response.status(Response.Status.PRECONDITION_FAILED).entity(lraId).build();
     }
 
     @PUT
