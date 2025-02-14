@@ -79,7 +79,16 @@ public class ValidLRACSParticipant {
         assert lraId != null;
 
         return CompletableFuture.runAsync(
-                () -> lraMetricService.incrementMetric(LRAMetricType.Compensated, lraId, ValidLRACSParticipant.class));
+                () -> {
+                    lraMetricService.incrementMetric(LRAMetricType.Compensated, lraId, ValidLRACSParticipant.class);
+                    try {
+                        wait(10000);
+                    }
+                    catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                });
     }
 
     @Complete
@@ -89,6 +98,13 @@ public class ValidLRACSParticipant {
         return CompletableFuture.supplyAsync(() -> {
             lraMetricService.incrementMetric(LRAMetricType.Completed, lraId, ValidLRACSParticipant.class);
 
+            try {
+                wait(10000);
+            }
+            catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
             return Response.accepted().build(); // Completing
         });
     }
