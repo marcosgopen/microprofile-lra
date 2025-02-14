@@ -20,7 +20,7 @@
     <parent>
         <groupId>org.eclipse.microprofile</groupId>
         <artifactId>microprofile-parent</artifactId>
-        <version>2.4</version>
+        <version>3.4</version>
     </parent>
 
     <groupId>org.eclipse.microprofile.lra</groupId>
@@ -40,6 +40,7 @@
 <!--        <bnd-maven-plugin.version>3.4.0</bnd-maven-plugin.version>-->
 <!--        <bnd-baseline-maven-plugin.version>4.2.0</bnd-baseline-maven-plugin.version>-->
 <!--        <build-helper-maven-plugin.version>1.12</build-helper-maven-plugin.version>-->
+        <maven.compiler.release>17</maven.compiler.release>
     </properties>
 
     <licenses>
