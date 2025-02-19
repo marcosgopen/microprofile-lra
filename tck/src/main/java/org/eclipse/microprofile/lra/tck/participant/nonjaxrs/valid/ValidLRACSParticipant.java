@@ -80,14 +80,13 @@ public class ValidLRACSParticipant {
 
         return CompletableFuture.runAsync(
                 () -> {
-                    lraMetricService.incrementMetric(LRAMetricType.Compensated, lraId, ValidLRACSParticipant.class);
                     try {
                         wait(10000);
-                    }
-                    catch (InterruptedException e) {
+                    } catch (InterruptedException e) {
                         // TODO Auto-generated catch block
                         e.printStackTrace();
                     }
+                    lraMetricService.incrementMetric(LRAMetricType.Compensated, lraId, ValidLRACSParticipant.class);
                 });
     }
 
@@ -96,15 +95,14 @@ public class ValidLRACSParticipant {
         assert lraId != null;
 
         return CompletableFuture.supplyAsync(() -> {
-            lraMetricService.incrementMetric(LRAMetricType.Completed, lraId, ValidLRACSParticipant.class);
 
             try {
                 wait(10000);
-            }
-            catch (InterruptedException e) {
+            } catch (InterruptedException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
+            lraMetricService.incrementMetric(LRAMetricType.Completed, lraId, ValidLRACSParticipant.class);
             return Response.accepted().build(); // Completing
         });
     }
