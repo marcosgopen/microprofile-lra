@@ -25,6 +25,8 @@ import static org.eclipse.microprofile.lra.tck.participant.api.ParticipatingTckR
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.lra.annotation.Compensate;
 import org.eclipse.microprofile.lra.annotation.Complete;
@@ -78,21 +80,27 @@ public class ValidLRACSParticipant {
     public CompletionStage<Void> compensate(URI lraId) {
         assert lraId != null;
 
+        Executor delayed = CompletableFuture.delayedExecutor(1L, TimeUnit.SECONDS);
         return CompletableFuture.runAsync(
-                () -> lraMetricService.incrementMetric(LRAMetricType.Compensated, lraId, ValidLRACSParticipant.class));
+                () -> {
+                    lraMetricService.incrementMetric(LRAMetricType.Compensated, lraId, ValidLRACSParticipant.class);
+                }, delayed);
     }
 
     @Complete
     public CompletionStage<Response> complete(URI lraId) {
         assert lraId != null;
-
+        Executor delayed = CompletableFuture.delayedExecutor(1L, TimeUnit.SECONDS);
         return CompletableFuture.supplyAsync(() -> {
             lraMetricService.incrementMetric(LRAMetricType.Completed, lraId, ValidLRACSParticipant.class);
-
             return Response.accepted().build(); // Completing
-        });
+        }, delayed);
     }
 
+    /*
+     * The @Status method, if present, MUST report the progress of the compensation. Similarly, if the resource cannot
+     * perform a completion activity immediately.
+     */
     @Status
     public CompletionStage<ParticipantStatus> status(URI lraId) {
         assert lraId != null;
@@ -100,7 +108,19 @@ public class ValidLRACSParticipant {
         return CompletableFuture.supplyAsync(() -> {
             lraMetricService.incrementMetric(LRAMetricType.Status, lraId, ValidLRACSParticipant.class);
 
-            return ParticipantStatus.Completed;
+            int completed = lraMetricService.getMetric(LRAMetricType.Completed, lraId, ValidLRACSParticipant.class);
+
+            int compensated = lraMetricService.getMetric(LRAMetricType.Compensated, lraId, ValidLRACSParticipant.class);
+            // setting as default Completing, but it could also be Active or Compensating
+            // as default it is not Ready (nor completed or compensated)
+            ParticipantStatus response = ParticipantStatus.Completing;
+            if (completed > 0) {
+                response = ParticipantStatus.Completed;
+            }
+            if (compensated > 0) {
+                response = ParticipantStatus.Compensated;
+            }
+            return response;
         });
     }
 

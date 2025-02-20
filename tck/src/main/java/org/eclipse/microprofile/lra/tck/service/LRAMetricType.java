@@ -27,8 +27,10 @@ public enum LRAMetricType {
     FailedToCancel, // an LRA that failed to cancel
 
     // Participant statistics
-    Compensated, // a participant that was asked to compensate
-    Completed, // a participant that was asked to complete
+    Compensating, // a participant that was asked to compensate
+    Completing, // a participant that was asked to complete
+    Compensated, // a participant that compensated
+    Completed, // a participant that completed
     Status, // a participant that was asked for its status
     Forget, // a participant that was told to forget
     Nested, // a participant callback that was invoked in the context of a parent LRA
