@@ -33,6 +33,9 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+
 import org.eclipse.microprofile.lra.annotation.Compensate;
 import org.eclipse.microprofile.lra.annotation.Complete;
 import org.eclipse.microprofile.lra.annotation.Forget;
@@ -99,6 +102,7 @@ public class ContextTckResource {
     private static final String REQUIRES_NEW_LRA_PATH = "/requires-new-lra";
 
     private ExecutorService excecutorService;
+    private boolean managedByContainer;
 
     @Inject
     private LRAMetricService lraMetricService;
@@ -131,13 +135,29 @@ public class ContextTckResource {
 
     @PostConstruct
     private void postConstruct() {
-        excecutorService = Executors.newFixedThreadPool(1);
-
+        ExecutorService managed = lookupManagedExecutorService();
+        if (managed != null) {
+            excecutorService = managed;
+            managedByContainer = true;
+        } else {
+            excecutorService = Executors.newFixedThreadPool(1);
+            managedByContainer = false;
+        }
     }
 
     @PreDestroy
     private void preDestroy() {
-        excecutorService.shutdown();
+        if (!managedByContainer) {
+            excecutorService.shutdown();
+        }
+    }
+
+    private static ExecutorService lookupManagedExecutorService() {
+        try {
+            return InitialContext.doLookup("java:comp/DefaultManagedExecutorService");
+        } catch (NamingException e) {
+            return null;
+        }
     }
 
     private ExecutorService getExcecutorService() {
